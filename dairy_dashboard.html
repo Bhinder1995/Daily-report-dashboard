@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dairy Operations Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,:after,:before{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#fff;--bg2:#f5f5f5;--bg3:#ebebeb;--text:#1a1a1a;--text2:#555;--text3:#888;--border:#ddd;--border2:#ccc;--blue:#1a6fba;--blue-bg:#e8f2fb;--blue-text:#1a5a99;--green:#15803d;--green-bg:#dcfce7;--green-text:#166534;--red:#b91c1c;--red-bg:#fee2e2;--red-text:#991b1b;--amber:#b45309;--amber-bg:#fef3c7;--amber-text:#92400e;--radius:8px;--radius-lg:12px;--sidebar-w:200px;--topbar-h:56px;--ease:.25s ease;--shadow:0 2px 8px rgba(0,0,0,.08);--shadow-lg:0 4px 20px rgba(0,0,0,.14)}
+[data-theme=dark]{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--text:#f5f5f5;--text2:#aaa;--text3:#777;--border:#3a3a3c;--border2:#555;--blue:#5ba3e8;--blue-bg:#1a3a5c;--blue-text:#90c4f5;--green:#4ade80;--green-bg:#14532d;--green-text:#86efac;--red:#f87171;--red-bg:#7f1d1d;--red-text:#fca5a5;--amber:#fbbf24;--amber-bg:#78350f;--amber-text:#fde68a}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg2);color:var(--text);min-height:100vh;font-size:14px;overflow-x:hidden}
+
+/* ── Topbar ── */
+.topbar{background:var(--bg);border-bottom:1px solid var(--border);padding:0 12px;display:flex;align-items:center;justify-content:space-between;height:var(--topbar-h);position:sticky;top:0;z-index:100;gap:8px}
+.tbar-l{display:flex;align-items:center;gap:8px;min-width:0}
+.hamburger{display:none;background:none;border:1px solid var(--border);border-radius:var(--radius);width:36px;height:36px;cursor:pointer;align-items:center;justify-content:center;color:var(--text2);flex-shrink:0;font-size:18px;transition:background .15s}
+.hamburger:hover{background:var(--bg2)}
+.tbar-brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbar-brand i{font-size:20px;color:var(--blue);flex-shrink:0}
+.tbar-r{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.theme-btn{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;cursor:pointer;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s}
+.theme-btn:hover{background:var(--bg3)}
+.theme-btn span{font-size:12px}
+@media(max-width:480px){.theme-btn span{display:none}.topbar{padding:0 8px}}
+
+/* ── Sidebar ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:98;opacity:0;transition:opacity var(--ease)}
+.sidebar-overlay.show{opacity:1;display:block}
+.layout{display:flex;min-height:calc(100vh - var(--topbar-h))}
+.sidebar{width:var(--sidebar-w);background:var(--bg);border-right:1px solid var(--border);padding:12px 0;flex-shrink:0;position:sticky;top:var(--topbar-h);height:calc(100vh - var(--topbar-h));overflow-y:auto;z-index:99;transition:transform var(--ease)}
+.sidebar-sc{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--text3);padding:12px 16px 6px;text-transform:uppercase}
+.nav-i{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border-radius:0;transition:background .1s;border:none;background:none;width:100%;text-align:left;-webkit-tap-highlight-color:transparent}
+.nav-i i{font-size:17px;flex-shrink:0}
+.nav-i:hover{background:var(--bg2);color:var(--text)}
+.nav-i.active{background:var(--blue-bg);color:var(--blue-text);font-weight:600}
+.main{flex:1;padding:20px 16px;max-width:1120px;min-width:0}
+@media(min-width:701px){.main{padding:24px}}
+
+/* ── Pages ── */
+.page{display:none;animation:fadeIn .2s}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Cards / UI ── */
+.page-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.page-title i{color:var(--blue)}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+@media(min-width:701px){.card{padding:20px}}
+.ctitle{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sl{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);background:var(--bg2);border-radius:var(--radius);padding:7px 12px;margin:16px 0 12px;display:flex;align-items:center;gap:6px}
+.sl:first-of-type{margin-top:0}
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+@media(min-width:701px){.fg{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}}
+.fg2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:701px){.fg2{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}}
+.fg3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:600px){.fg3{grid-template-columns:1fr 1fr}}
+.grp{display:flex;flex-direction:column;gap:4px}
+.grp label{font-size:12px;font-weight:500;color:var(--text2)}
+.grp input,.grp select,.grp textarea{padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:13px;outline:none;transition:border-color .15s;width:100%}
+.grp input:focus,.grp select:focus{border-color:var(--blue)}
+.grp .hint{font-size:10px;color:var(--text3);margin-top:1px}
+.btn{padding:8px 14px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background .1s,transform .1s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.btn:hover{background:var(--bg2)}.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn:hover:disabled{background:var(--bg)}
+.btn-p{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue)}
+.btn-p:hover{background:var(--blue);color:#fff}
+.btn-s{background:var(--green-bg);color:var(--green-text);border-color:var(--green)}
+.btn-s:hover{background:var(--green);color:#fff}
+.btn-d{background:var(--red-bg);color:var(--red-text);border-color:var(--red)}
+.btn-d:hover{background:var(--red);color:#fff}
+.btn-w{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber)}
+.btn-w:hover{background:var(--amber);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 7px;font-size:11px}
+.br{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+
+/* ── Metrics ── */
+.mt{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+@media(min-width:701px){.mt{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}}
+.m{background:var(--bg2);border-radius:var(--radius);padding:12px 14px;transition:transform .2s}
+.m:hover{transform:translateY(-1px)}
+.ml{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:500}
+.mv{font-size:20px;font-weight:600;color:var(--text);line-height:1.2;word-break:break-all}
+@media(min-width:701px){.mv{font-size:22px}}
+.mu{font-size:12px;color:var(--text3);font-weight:400}
+.cw{position:relative;width:100%;height:200px;margin-top:8px}
+@media(min-width:701px){.cw{height:220px}}
+.cw-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--text3);font-size:13px;background:var(--bg2);border-radius:var(--radius);height:180px}
+.cw-empty i{font-size:28px;opacity:.4}
+.tc{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:701px){.tc{grid-template-columns:1fr 1fr}}
+.tc3{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:701px){.tc3{grid-template-columns:1fr 1fr 1fr}}
+
+/* ── Tables ── */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 8px;background:var(--bg2);color:var(--text3);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:1}
+td{padding:7px 8px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius)}
+.tw table{min-width:900px}
+
+/* ── Progress ── */
+.pb{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:4px}
+.pf{height:100%;border-radius:3px;background:var(--blue);transition:width .3s}
+
+/* ── Upload ── */
+.ua{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:28px 16px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
+.ua:hover{background:var(--bg2);border-color:var(--blue)}
+.ua i{font-size:28px;color:var(--text3);display:block;margin-bottom:8px}
+.ua p{font-size:14px;color:var(--text2);margin-bottom:4px}
+.ua small{font-size:11px;color:var(--text3)}
+.ua.drag-over{border-color:var(--blue);background:var(--blue-bg)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;display:none;z-index:999;box-shadow:var(--shadow-lg);max-width:calc(100vw - 32px);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .2s}
+@media(min-width:701px){.toast{left:auto;right:24px;transform:none}}
+.toast.s{background:var(--green-bg);color:var(--green-text);border:1px solid var(--green)}
+.toast.e{background:var(--red-bg);color:var(--red-text);border:1px solid var(--red)}
+.toast.w{background:var(--amber-bg);color:var(--amber-text);border:1px solid var(--amber)}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
+.bg-g{background:var(--green-bg);color:var(--green-text)}
+.bg-r{background:var(--red-bg);color:var(--red-text)}
+.bg-b{background:var(--blue-bg);color:var(--blue-text)}
+.bg-y{background:var(--amber-bg);color:var(--amber-text)}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;justify-content:center;align-items:flex-start;padding:20px 10px;overflow-y:auto;backdrop-filter:blur(2px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg);border-radius:var(--radius-lg);width:100%;max-width:900px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:modalIn .2s}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-h{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:15px;flex-shrink:0}
+.modal-h button{background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;padding:4px}
+.modal-h button:hover{color:var(--text)}
+.modal-b{padding:16px 20px;overflow-y:auto;flex:1}
+.modal-f{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;flex-wrap:wrap}
+
+/* ── Import preview table ── */
+.ip-table{font-size:11px;width:100%;min-width:600px}
+.ip-table th{font-size:9px;padding:6px 6px}
+.ip-table td{padding:5px 6px;font-size:11px}
+.ip-row-new td{background:rgba(21,128,61,.06)}
+.ip-row-upd td{background:rgba(26,111,186,.06)}
+.ip-row-err td{background:rgba(185,28,28,.08)}
+.ip-row-err td:first-child{position:relative}
+.ip-row-err td:first-child::after{content:'!';position:absolute;left:2px;top:2px;background:var(--red);color:#fff;width:14px;height:14px;border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.ip-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:600}
+.ip-badge-new{background:var(--green-bg);color:var(--green-text)}
+.ip-badge-upd{background:var(--blue-bg);color:var(--blue-text)}
+.ip-badge-err{background:var(--red-bg);color:var(--red-text)}
+.ip-err{font-size:10px;color:var(--red);margin-top:2px;display:block}
+
+/* ── Unsaved ── */
+.unsaved-badge{display:none;background:var(--amber-bg);color:var(--amber-text);font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
+.unsaved-badge.show{display:inline-block}
+
+/* ── History toolbar ── */
+.htool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.htool .hsearch{flex:1;min-width:140px;max-width:260px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+.htool .hsearch:focus{border-color:var(--blue)}
+.htool .hmonth{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:13px;max-width:170px}
+
+/* ── Responsive ── */
+@media(max-width:700px){
+.hamburger{display:flex}
+.sidebar{position:fixed;top:var(--topbar-h);left:0;bottom:0;height:auto;transform:translateX(-100%);box-shadow:2px 0 12px rgba(0,0,0,.12)}
+.sidebar.open{transform:translateX(0)}
+.sidebar-overlay.show{display:block}
+.layout{flex-direction:column}
+.main{padding:16px 12px;max-width:100%}
+.modal{padding:0;max-height:100vh;border-radius:0;margin:0;max-width:100%}
+.modal-overlay{padding:0;align-items:flex-end}
+.modal-overlay.show{align-items:flex-end}
+.modal-h{padding:14px 16px}
+.modal-b{padding:12px 16px}
+.modal-f{padding:10px 16px}
+}
+@media(max-width:480px){
+.mt{grid-template-columns:repeat(2,1fr);gap:8px}
+.m{padding:10px}.mv{font-size:17px}
+.fg{grid-template-columns:1fr 1fr;gap:10px}
+.fg2{grid-template-columns:1fr 1fr}
+.br{flex-direction:column}.br .btn{justify-content:center}
+.page-title{font-size:16px;margin-bottom:16px}
+.card{padding:12px;border-radius:10px}
+.cw{height:180px}
+.ua{padding:20px 12px}.ua i{font-size:24px}
+.ip-table{font-size:10px}.ip-table td,.ip-table th{padding:4px 4px}
+.htool .hsearch{min-width:100px;max-width:100%}
+}
+@media(max-width:380px){
+.fg,.fg2,.fg3{grid-template-columns:1fr}
+.mt{grid-template-columns:1fr 1fr}
+}
+
+/* ── Print ── */
+@media print{
+.topbar,.sidebar,.sidebar-overlay,.hamburger,.toast,.modal-overlay,.br{display:none!important}
+.layout{display:block}
+.main{padding:0!important;max-width:100%}
+.page{display:block!important}
+.card{border:1px solid #ddd!important;box-shadow:none!important;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tbar-l">
+    <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle navigation"><i class="ti ti-menu-2"></i></button>
+    <div class="tbar-brand"><i class="ti ti-droplet-filled"></i><span id="brandText">Dairy Dashboard</span></div>
+  </div>
+  <div class="tbar-r">
+    <span class="unsaved-badge" id="unsavedBadge"><i class="ti ti-exclamation-circle"></i> Unsaved</span>
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme"><i class="ti ti-moon" id="themeIcon"></i><span id="themeLabel">Dark</span></button>
+    <button class="btn btn-s btn-sm" onclick="exportExcel()" title="Download Excel" id="exportBtn"><i class="ti ti-file-spreadsheet"></i><span>Excel</span></button>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-sc">Main</div>
+    <button class="nav-i active" data-route="entry" onclick="navigate('entry')"><i class="ti ti-plus"></i> Daily Entry</button>
+    <button class="nav-i" data-route="summary" onclick="navigate('summary')"><i class="ti ti-layout-dashboard"></i> MTD Summary</button>
+    <div class="sidebar-sc">Operations</div>
+    <button class="nav-i" data-route="procurement" onclick="navigate('procurement')"><i class="ti ti-droplet"></i> Procurement</button>
+    <button class="nav-i" data-route="processing" onclick="navigate('processing')"><i class="ti ti-settings"></i> Processing</button>
+    <button class="nav-i" data-route="financial" onclick="navigate('financial')"><i class="ti ti-coin"></i> Financials</button>
+    <div class="sidebar-sc">Data</div>
+    <button class="nav-i" data-route="history" onclick="navigate('history')"><i class="ti ti-history"></i> History</button>
+    <button class="nav-i" data-route="import" onclick="navigate('import')"><i class="ti ti-upload"></i> Import</button>
+  </div>
+
+  <div class="main">
+
+    <!-- ═══ ENTRY ═══ -->
+    <div id="page-entry" class="page active">
+      <div class="page-title"><i class="ti ti-plus"></i> Daily Entry <span style="font-size:12px;font-weight:400;color:var(--text3)" id="entryDateLabel"></span></div>
+      <div id="entryPreview" style="margin-bottom:16px"></div>
+      <div class="card">
+        <div class="fg" style="margin-bottom:4px">
+          <div class="grp"><label>Date</label><input type="date" id="eDate" onchange="trackUnsaved()"></div>
+          <div class="grp"><label>Routes</label><input type="number" id="eRoutes" placeholder="0" min="0" oninput="trackUnsaved()"></div>
+        </div>
+        <div class="sl"><i class="ti ti-shopping-cart"></i> Sales</div>
+        <div class="fg">
+          <div class="grp"><label>Total sale value (₹)</label><input type="number" id="eTsv" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Total sale volume (L)</label><input type="number" id="eTvol" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Milk sale (L)</label><input type="number" id="eMilk" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Lassi sale (L/kg)</label><input type="number" id="eLassi" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Dahi sale (kg)</label><input type="number" id="eDahi" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Paneer sale (kg)</label><input type="number" id="ePaneer" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Kheer sale (kg)</label><input type="number" id="eKheer" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Rabri sale (kg)</label><input type="number" id="eRabri" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Institution sale (₹)</label><input type="number" id="eInst" placeholder="0" oninput="trackUnsaved()"></div>
+        </div>
+        <div class="sl"><i class="ti ti-truck"></i> Procurement</div>
+        <div class="fg">
+          <div class="grp"><label>Milk received (L)</label><input type="number" id="eRecv" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Avg fat %</label><input type="number" id="eFat" placeholder="0.0" step="0.1" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Avg SNF %</label><input type="number" id="eSnf" placeholder="0.0" step="0.1" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Avg proc. rate (₹/L)</label><input type="number" id="eRate" placeholder="0.00" step="0.01" oninput="trackUnsaved()"></div>
+        </div>
+        <div class="sl"><i class="ti ti-building-factory"></i> Processing & VAP</div>
+        <div class="fg">
+          <div class="grp"><label>Processing capacity (L/day)</label><input type="number" id="eCap" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>City supply processed (L)</label><input type="number" id="eCity" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Dahi installed cap (kg/day)</label><input type="number" id="eDahiCap" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Dahi processed (kg)</label><input type="number" id="eDahiProc" placeholder="0" oninput="trackUnsaved()"></div>
+        </div>
+        <div class="sl"><i class="ti ti-chart-pie"></i> Financial Parameters</div>
+        <div class="fg">
+          <div class="grp"><label>Gross revenue (₹)</label><input type="number" id="eGrev" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Procurement cost (₹)</label><input type="number" id="ePcost" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Variable cost — production (₹)</label><input type="number" id="eVcost" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Packaging cost (₹)</label><input type="number" id="ePack" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Power cost (₹)</label><input type="number" id="ePower" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Manpower cost (₹)</label><input type="number" id="eMan" placeholder="0" oninput="trackUnsaved()"></div>
+          <div class="grp"><label>Overheads (₹)</label><input type="number" id="eOver" placeholder="0" oninput="trackUnsaved()"></div>
+        </div>
+        <div class="br">
+          <button class="btn btn-p" onclick="saveEntry()"><i class="ti ti-device-floppy"></i> Save entry</button>
+          <button class="btn" onclick="clearForm()"><i class="ti ti-refresh"></i> Clear form</button>
+          <span style="flex:1;min-width:60px"></span>
+          <button class="btn btn-w btn-sm" onclick="todayDate()" title="Set date to today"><i class="ti ti-calendar"></i> Today</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SUMMARY ═══ -->
+    <div id="page-summary" class="page">
+      <div class="page-title"><i class="ti ti-layout-dashboard"></i> Month-to-Date Summary <span style="font-size:12px;font-weight:400;color:var(--text3)" id="summaryMonthLabel"></span></div>
+      <div class="mt" id="mtdMetrics"></div>
+      <div class="tc">
+        <div class="card">
+          <div class="ctitle">Sales mix — MTD</div>
+          <div class="cw" id="wrapSalesMix"><canvas id="chartSalesMix" role="img"></canvas></div>
+          <div id="mixLegend" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:11px"></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">Daily sale value trend (₹) <span style="font-size:10px;font-weight:400;color:var(--text3)" id="trendAvgLabel"></span></div>
+          <div class="cw" id="wrapTrend"><canvas id="chartTrend" role="img"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Capacity utilisation — milk processing (daily) <span style="font-weight:400;font-size:10px;color:var(--text3)" id="capUtilAvg"></span></div>
+        <div id="capUtil" style="margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- ═══ PROCUREMENT ═══ -->
+    <div id="page-procurement" class="page">
+      <div class="page-title"><i class="ti ti-droplet"></i> Procurement</div>
+      <div class="mt" id="procMetrics"></div>
+      <div class="card">
+        <div class="ctitle">Daily milk received (L)</div>
+        <div class="cw" id="wrapProc"><canvas id="chartProc" role="img"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Fat % vs SNF % — daily trend</div>
+        <div class="cw" id="wrapQual"><canvas id="chartQual" role="img"></canvas></div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:24px;height:3px;background:#D85A30;display:inline-block;border-radius:2px"></span> Fat %</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:24px;height:3px;background:#7F77DD;display:inline-block;border-radius:2px;border-top:2px dashed #7F77DD;background:none"></span> SNF %</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PROCESSING ═══ -->
+    <div id="page-processing" class="page">
+      <div class="page-title"><i class="ti ti-settings"></i> Processing</div>
+      <div class="mt" id="proc2Metrics"></div>
+      <div class="card">
+        <div class="ctitle">City supply processed vs capacity (L)</div>
+        <div class="cw" id="wrapCity"><canvas id="chartCity" role="img"></canvas></div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:rgba(55,138,221,0.3);display:inline-block"></span> Capacity</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#378ADD;display:inline-block"></span> City supply</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Dahi — installed capacity vs processed (kg)</div>
+        <div class="cw" id="wrapDahi"><canvas id="chartDahi" role="img"></canvas></div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:rgba(212,83,126,0.3);display:inline-block"></span> Installed cap</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#D4537E;display:inline-block"></span> Processed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FINANCIALS ═══ -->
+    <div id="page-financial" class="page">
+      <div class="page-title"><i class="ti ti-coin"></i> Financials</div>
+      <div class="mt" id="finMetrics"></div>
+      <div class="card">
+        <div class="ctitle">MTD cost structure breakdown</div>
+        <div class="cw" id="wrapCost" style="height:240px"><canvas id="chartCost" role="img"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Gross revenue vs total cost — daily (₹) <span style="font-weight:400;font-size:10px;color:var(--text3)" id="revCostAvgLabel"></span></div>
+        <div class="cw" id="wrapRevCost"><canvas id="chartRevCost" role="img"></canvas></div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:24px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span> Revenue</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:24px;height:3px;background:#D85A30;display:inline-block;border-radius:2px"></span> Total cost</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ HISTORY ═══ -->
+    <div id="page-history" class="page">
+      <div class="page-title"><i class="ti ti-history"></i> Record History <span style="font-size:12px;font-weight:400;color:var(--text3)" id="histCount"></span></div>
+      <div class="card">
+        <div class="htool">
+          <input class="hsearch" id="histSearch" placeholder="Search date, sale, product..." oninput="debounceSearch()">
+          <input class="hmonth" type="month" id="hMonth" onchange="applyHistFilter()">
+          <button class="btn btn-sm" onclick="applyHistFilter()"><i class="ti ti-search"></i></button>
+          <button class="btn btn-sm" onclick="clearHistFilter()"><i class="ti ti-list"></i> All</button>
+          <button class="btn btn-sm btn-s" onclick="exportExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+          <button class="btn btn-sm btn-d" onclick="clearAll()"><i class="ti ti-trash"></i> Clear</button>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th onclick="sortHist('date')" style="cursor:pointer">Date <i class="ti ti-arrows-sort" id="srt-date" style="font-size:9px"></i></th>
+              <th onclick="sortHist('total_sale_value')" style="cursor:pointer">Sale (₹) <i class="ti ti-arrows-sort" id="srt-total_sale_value" style="font-size:9px"></i></th>
+              <th>Vol (L)</th><th>Milk</th><th>Lassi</th><th>Dahi</th><th>Paneer</th><th>Kheer</th><th>Rabri</th>
+              <th>Routes</th><th>Inst (₹)</th><th>Recv (L)</th><th>Fat%</th><th>SNF%</th><th>Rate</th>
+              <th>Cap (L)</th><th>City</th><th>Util%</th><th>Rev (₹)</th><th>Cost (₹)</th><th>Margin</th><th></th><th></th>
+            </tr></thead>
+            <tbody id="histBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ IMPORT ═══ -->
+    <div id="page-import" class="page">
+      <div class="page-title"><i class="ti ti-upload"></i> Import Data</div>
+      <div class="card">
+        <div class="ua" id="uploadArea" onclick="document.getElementById('fileIn').click()">
+          <i class="ti ti-cloud-upload"></i>
+          <p>Click or drag & drop Excel, CSV, or TXT</p>
+          <small>Accepted: .xlsx, .xls, .csv, .txt — column names must match guide below</small>
+        </div>
+        <input type="file" id="fileIn" accept=".csv,.txt,.xlsx,.xls" style="display:none" onchange="handleImport(event)">
+        <div id="importPreview"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Column mapping guide — use these exact column names</div>
+        <div class="tw">
+          <table style="min-width:auto;font-size:11px">
+            <thead><tr><th>Column name</th><th>Description</th><th>Format</th></tr></thead>
+            <tbody>
+              <tr><td><code>date</code></td><td>Entry date</td><td>YYYY-MM-DD</td></tr>
+              <tr><td><code>routes</code></td><td>Number of routes</td><td>Integer</td></tr>
+              <tr><td><code>total_sale_value</code></td><td>Total sale value (₹)</td><td>Number</td></tr>
+              <tr><td><code>total_sale_volume</code></td><td>Total sale volume (L)</td><td>Number</td></tr>
+              <tr><td><code>milk_sale</code></td><td>Milk sale (L)</td><td>Number</td></tr>
+              <tr><td><code>lassi_sale</code></td><td>Lassi sale (L/kg)</td><td>Number</td></tr>
+              <tr><td><code>dahi_sale</code></td><td>Dahi sale (kg)</td><td>Number</td></tr>
+              <tr><td><code>paneer_sale</code></td><td>Paneer sale (kg)</td><td>Number</td></tr>
+              <tr><td><code>kheer_sale</code></td><td>Kheer sale (kg)</td><td>Number</td></tr>
+              <tr><td><code>rabri_sale</code></td><td>Rabri sale (kg)</td><td>Number</td></tr>
+              <tr><td><code>institution_sale</code></td><td>Institution sale (₹)</td><td>Number</td></tr>
+              <tr><td><code>milk_received</code></td><td>Total milk received (L)</td><td>Number</td></tr>
+              <tr><td><code>fat_pct</code></td><td>Average fat %</td><td>Decimal</td></tr>
+              <tr><td><code>snf_pct</code></td><td>Average SNF %</td><td>Decimal</td></tr>
+              <tr><td><code>proc_rate</code></td><td>Avg procurement rate (₹/L)</td><td>Decimal</td></tr>
+              <tr><td><code>proc_capacity</code></td><td>Processing capacity (L/day)</td><td>Number</td></tr>
+              <tr><td><code>city_supply</code></td><td>City supply processed (L)</td><td>Number</td></tr>
+              <tr><td><code>dahi_cap</code></td><td>Dahi installed cap (kg)</td><td>Number</td></tr>
+              <tr><td><code>dahi_proc</code></td><td>Dahi processed (kg)</td><td>Number</td></tr>
+              <tr><td><code>gross_revenue</code></td><td>Gross revenue (₹)</td><td>Number</td></tr>
+              <tr><td><code>proc_cost</code></td><td>Procurement cost (₹)</td><td>Number</td></tr>
+              <tr><td><code>var_cost</code></td><td>Variable cost — production (₹)</td><td>Number</td></tr>
+              <tr><td><code>pack_cost</code></td><td>Packaging cost (₹)</td><td>Number</td></tr>
+              <tr><td><code>power_cost</code></td><td>Power cost (₹)</td><td>Number</td></tr>
+              <tr><td><code>man_cost</code></td><td>Manpower cost (₹)</td><td>Number</td></tr>
+              <tr><td><code>overheads</code></td><td>Overheads (₹)</td><td>Number</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ═══ IMPORT MODAL ═══ -->
+<div class="modal-overlay" id="importModal" onclick="if(event.target===this)closeImportModal()">
+  <div class="modal">
+    <div class="modal-h">
+      <span id="importModalTitle">Import Preview</span>
+      <button onclick="closeImportModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-b" id="importModalBody"></div>
+    <div class="modal-f" id="importModalFooter">
+      <button class="btn" onclick="closeImportModal()">Cancel</button>
+      <button class="btn btn-p" id="importConfirmBtn" onclick="confirmImport()"><i class="ti ti-upload"></i> Import records</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================================================================
+   DAIRY OPERATIONS DASHBOARD — PRO EDITION
+   =================================================================== */
+
+// ── State ──────────────────────────────────────────────────────────
+const KEY = 'dairy_dash_v2';
+let records = JSON.parse(localStorage.getItem(KEY) || '[]');
+let charts = {};
+let filteredRecs = null;
+let hasUnsaved = false;
+let importData = null;
+let _toastTimer = null;
+let _searchTimer = null;
+let _formOrig = '';
+let _histSortKey = null;
+let _histSortDir = 1;
+let _exporting = false;
+
+// ── Theme ──────────────────────────────────────────────────────────
+const savedTheme = localStorage.getItem('dairy_theme') || 'light';
+if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
+function toggleTheme() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  localStorage.setItem('dairy_theme', dark ? 'light' : 'dark');
+  document.getElementById('themeIcon').className = dark ? 'ti ti-moon' : 'ti ti-sun';
+  document.getElementById('themeLabel').textContent = dark ? 'Dark' : 'Light';
+  Object.values(charts).forEach(c => {
+    if (c.options.scales) Object.values(c.options.scales).forEach(s => {
+      if (s.ticks) s.ticks.color = tickColor();
+      if (s.grid) s.grid.color = gridColor();
+    });
+    c.update();
+  });
+}
+if (savedTheme === 'dark') {
+  document.getElementById('themeIcon').className = 'ti ti-sun';
+  document.getElementById('themeLabel').textContent = 'Light';
+}
+
+// ── Router ─────────────────────────────────────────────────────────
+function getRoute() { return location.hash.replace(/^#\/?/, '') || 'entry'; }
+
+function navigate(route, pushState = true) {
+  if (pushState) location.hash = '#' + route;
+  else applyRoute(route);
+}
+
+function applyRoute(route) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-i').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + route);
+  if (page) page.classList.add('active');
+  const nav = document.querySelector(`.nav-i[data-route="${route}"]`);
+  if (nav) nav.classList.add('active');
+  closeSidebar();
+
+  const tab = route;
+  if (tab === 'entry') { renderEntryPreview(); setEntryLabel(); }
+  else if (tab === 'summary') renderSummary();
+  else if (tab === 'procurement') renderProcurement();
+  else if (tab === 'processing') renderProcessing();
+  else if (tab === 'financial') renderFinancial();
+  else if (tab === 'history') { syncMonthFilter(); renderHistory(); }
+  else if (tab === 'import') {}
+
+  document.getElementById('brandText').textContent = {
+    entry:'Daily Entry', summary:'MTD Summary', procurement:'Procurement',
+    processing:'Processing', financial:'Financials', history:'History', import:'Import'
+  }[tab] || 'Dairy Dashboard';
+}
+
+window.addEventListener('hashchange', () => applyRoute(getRoute()));
+
+// ── Sidebar ────────────────────────────────────────────────────────
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('sidebarOverlay');
+  const open = s.classList.toggle('open');
+  o.classList.toggle('show', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// ── Helpers ────────────────────────────────────────────────────────
+function save() { localStorage.setItem(KEY, JSON.stringify(records)); }
+function toast(msg, type = 's') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type; t.style.display = 'block';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+function v(id) { const el = document.getElementById(id); return el ? (parseFloat(el.value) || 0) : 0; }
+function vs(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function fmt(n) { return Math.round(n).toLocaleString('en-IN'); }
+function fmtd(n, d) { return (parseFloat(n) || 0).toFixed(d || 2); }
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+function hasData(arr) { return arr && arr.length > 0; }
+function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+function gridColor() { return isDark() ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'; }
+function tickColor() { return isDark() ? '#aaa' : '#666'; }
+
+function showEmptyChart(wrapId, msg) {
+  const wrap = document.getElementById(wrapId); if (!wrap) return;
+  const canvas = wrap.querySelector('canvas'); if (canvas) canvas.style.display = 'none';
+  let e = wrap.querySelector('.cw-empty'); if (!e) {
+    e = document.createElement('div'); e.className = 'cw-empty';
+    e.innerHTML = '<i class="ti ti-chart-bar-off"></i><span></span>';
+    wrap.appendChild(e);
+  }
+  e.style.display = 'flex';
+  e.querySelector('span').textContent = msg || 'No data for this month yet. Add entries in Daily Entry.';
+}
+function hideEmptyChart(wrapId) {
+  const wrap = document.getElementById(wrapId); if (!wrap) return;
+  const canvas = wrap.querySelector('canvas'); if (canvas) canvas.style.display = 'block';
+  const e = wrap.querySelector('.cw-empty'); if (e) e.style.display = 'none';
+}
+
+function monthName() {
+  return new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function currentMonthStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function syncMonthFilter() {
+  const el = document.getElementById('hMonth');
+  if (el && !el.value) el.value = currentMonthStr();
+}
+
+// ── Data ────────────────────────────────────────────────────────────
+function getMTD() {
+  const now = new Date(); const m = now.getMonth(); const y = now.getFullYear();
+  return records.filter(r => {
+    try { const d = new Date(r.date); return d.getMonth() === m && d.getFullYear() === y; } catch(e) { return false; }
+  });
+}
+function sum(arr, key) { return arr.reduce((a, b) => a + (b[key] || 0), 0); }
+function avg(arr, key) { return arr.length ? sum(arr, key) / arr.length : 0; }
+function avgIf(arr, key) { const f = arr.filter(r => r[key] > 0); return f.length ? sum(f, key) / f.length : 0; }
+
+function validateRecord(r) {
+  const errs = [];
+  if (!r.date || !/^\d{4}-\d{2}-\d{2}$/.test(String(r.date))) errs.push('Invalid or missing date (use YYYY-MM-DD)');
+  const numericFields = ['routes','total_sale_value','total_sale_volume','milk_sale','lassi_sale','dahi_sale',
+    'paneer_sale','kheer_sale','rabri_sale','institution_sale','milk_received','fat_pct','snf_pct','proc_rate',
+    'proc_capacity','city_supply','dahi_cap','dahi_proc','gross_revenue','proc_cost','var_cost','pack_cost',
+    'power_cost','man_cost','overheads'];
+  numericFields.forEach(f => {
+    if (r[f] !== undefined && r[f] !== null && r[f] !== '' && (isNaN(parseFloat(r[f])) || parseFloat(r[f]) < 0)) {
+      errs.push(f + ' must be a positive number');
+    }
+  });
+  return errs;
+}
+
+// ── Entry ───────────────────────────────────────────────────────────
+function setEntryLabel() {
+  const d = vs('eDate');
+  document.getElementById('entryDateLabel').textContent = d ? '— ' + d : '';
+}
+
+function todayDate() {
+  document.getElementById('eDate').value = new Date().toISOString().split('T')[0];
+  setEntryLabel(); trackUnsaved();
+}
+
+function trackUnsaved() {
+  const curr = JSON.stringify(getFormData());
+  hasUnsaved = curr !== _formOrig && curr !== '{}';
+  document.getElementById('unsavedBadge').classList.toggle('show', hasUnsaved);
+}
+
+function getFormData() {
+  return {
+    date: vs('eDate'), routes: v('eRoutes'), total_sale_value: v('eTsv'), total_sale_volume: v('eTvol'),
+    milk_sale: v('eMilk'), lassi_sale: v('eLassi'), dahi_sale: v('eDahi'),
+    paneer_sale: v('ePaneer'), kheer_sale: v('eKheer'), rabri_sale: v('eRabri'), institution_sale: v('eInst'),
+    milk_received: v('eRecv'), fat_pct: v('eFat'), snf_pct: v('eSnf'), proc_rate: v('eRate'),
+    proc_capacity: v('eCap'), city_supply: v('eCity'), dahi_cap: v('eDahiCap'), dahi_proc: v('eDahiProc'),
+    gross_revenue: v('eGrev'), proc_cost: v('ePcost'), var_cost: v('eVcost'),
+    pack_cost: v('ePack'), power_cost: v('ePower'), man_cost: v('eMan'), overheads: v('eOver')
+  };
+}
+
+function saveEntry() {
+  const date = vs('eDate');
+  if (!date) { toast('Please select a date', 'e'); return; }
+
+  const errs = validateRecord(getFormData());
+  if (errs.length) { toast(errs[0], 'e'); return; }
+
+  const rec = getFormData();
+  const idx = records.findIndex(r => r.date === date);
+  if (idx >= 0) { records[idx] = rec; } else { records.push(rec); }
+  records.sort((a, b) => a.date.localeCompare(b.date));
+  save();
+  hasUnsaved = false;
+  document.getElementById('unsavedBadge').classList.remove('show');
+  toast('Entry saved for ' + date);
+  clearForm(true);
+  renderEntryPreview();
+  if (document.getElementById('page-history').classList.contains('active')) renderHistory();
+}
+
+function clearForm(silent) {
+  ['eDate','eRoutes','eTsv','eTvol','eMilk','eLassi','eDahi','ePaneer','eKheer','eRabri','eInst',
+   'eRecv','eFat','eSnf','eRate','eCap','eCity','eDahiCap','eDahiProc',
+   'eGrev','ePcost','eVcost','ePack','ePower','eMan','eOver'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('eDate').value = new Date().toISOString().split('T')[0];
+  setEntryLabel();
+  if (!silent) { hasUnsaved = false; document.getElementById('unsavedBadge').classList.remove('show'); }
+  _formOrig = JSON.stringify(getFormData());
+}
+
+function renderEntryPreview() {
+  const mtd = getMTD();
+  if (!mtd.length) { document.getElementById('entryPreview').innerHTML = ''; return; }
+  const tsv = sum(mtd, 'total_sale_value'), tvol = sum(mtd, 'total_sale_volume');
+  const grev = sum(mtd, 'gross_revenue'), days = mtd.length;
+  document.getElementById('entryPreview').innerHTML = `
+    <div class="mt" style="margin-bottom:0">
+      <div class="m"><div class="ml">MTD sale value</div><div class="mv">₹${fmt(tsv)}</div></div>
+      <div class="m"><div class="ml">MTD volume</div><div class="mv">${fmt(tvol)}<span class="mu"> L</span></div></div>
+      <div class="m"><div class="ml">Days recorded</div><div class="mv">${days}</div></div>
+      <div class="m"><div class="ml">MTD gross revenue</div><div class="mv">₹${fmt(grev)}</div></div>
+    </div>`;
+}
+
+// ── MTD Summary ─────────────────────────────────────────────────────
+function renderSummary() {
+  const mtd = getMTD();
+  document.getElementById('summaryMonthLabel').textContent = '— ' + monthName();
+  if (!mtd.length) {
+    document.getElementById('mtdMetrics').innerHTML = '';
+    document.getElementById('capUtil').innerHTML = '';
+    document.getElementById('mixLegend').innerHTML = '';
+    document.getElementById('trendAvgLabel').textContent = '';
+    document.getElementById('capUtilAvg').textContent = '';
+    showEmptyChart('wrapSalesMix'); showEmptyChart('wrapTrend'); destroyChart('chartSalesMix'); destroyChart('chartTrend');
+    return;
+  }
+  hideEmptyChart('wrapSalesMix'); hideEmptyChart('wrapTrend');
+  const tsv=sum(mtd,'total_sale_value'),tvol=sum(mtd,'total_sale_volume'),inst=sum(mtd,'institution_sale');
+  const routes=avg(mtd,'routes'),totalCap=sum(mtd,'proc_capacity'),totalCity=sum(mtd,'city_supply');
+  const util=totalCap?Math.round(totalCity/totalCap*100):0;
+  document.getElementById('mtdMetrics').innerHTML=
+    `<div class="m"><div class="ml">MTD sale value</div><div class="mv">₹${fmt(tsv)}</div></div>
+     <div class="m"><div class="ml">MTD volume</div><div class="mv">${fmt(tvol)}<span class="mu"> L</span></div></div>
+     <div class="m"><div class="ml">Institution sale</div><div class="mv">₹${fmt(inst)}</div></div>
+     <div class="m"><div class="ml">Avg routes/day</div><div class="mv">${routes.toFixed(1)}</div></div>
+     <div class="m"><div class="ml">Days recorded</div><div class="mv">${mtd.length}</div></div>
+     <div class="m"><div class="ml">Capacity util.</div><div class="mv">${util}%</div></div>`;
+  document.getElementById('capUtil').innerHTML=mtd.filter(r=>r.proc_capacity>0).map(r=>{
+    const u=Math.min(Math.round(r.city_supply/r.proc_capacity*100),100);
+    const c=u>=90?'#1D9E75':u>=70?'#BA7517':'#378ADD';
+    return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--text2)">${r.date}</span><span style="color:var(--text);font-weight:500">${u}%</span></div><div class="pb"><div class="pf" style="width:${u}%;background:${c}"></div></div></div>`;
+  }).join('')||'<div style="color:var(--text3);font-size:12px;padding:8px 0">No capacity data for this period.</div>';
+  const capRecs = mtd.filter(r=>r.proc_capacity>0);
+  const avgUtil = capRecs.length ? Math.round(capRecs.reduce((a,r)=>a+(r.city_supply/r.proc_capacity*100),0)/capRecs.length) : 0;
+  document.getElementById('capUtilAvg').textContent = '— Avg: ' + avgUtil + '%';
+
+  const labels=mtd.map(r=>r.date.slice(5));
+  destroyChart('chartSalesMix');destroyChart('chartTrend');
+  const mixData=[sum(mtd,'milk_sale'),sum(mtd,'lassi_sale'),sum(mtd,'dahi_sale'),sum(mtd,'paneer_sale'),sum(mtd,'kheer_sale'),sum(mtd,'rabri_sale')];
+  const mixLbl=['Milk','Lassi','Dahi','Paneer','Kheer','Rabri'];
+  const mixClr=['#378ADD','#1D9E75','#D85A30','#D4537E','#BA7517','#7F77DD'];
+  charts['chartSalesMix']=new Chart(document.getElementById('chartSalesMix').getContext('2d'),{
+    type:'doughnut',data:{labels:mixLbl,datasets:[{data:mixData,backgroundColor:mixClr,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+  const total=mixData.reduce((a,b)=>a+b,0);
+  document.getElementById('mixLegend').innerHTML=mixLbl.map((l,i)=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:2px;background:${mixClr[i]};display:inline-block"></span> ${l} ${total?Math.round(mixData[i]/total*100):0}%</span>`).join('');
+
+  const trendData=mtd.map(r=>r.total_sale_value);
+  const trendAvg=trendData.length?Math.round(trendData.reduce((a,b)=>a+b,0)/trendData.length):0;
+  document.getElementById('trendAvgLabel').textContent = '— Avg: ₹' + fmt(trendAvg);
+  charts['chartTrend']=new Chart(document.getElementById('chartTrend').getContext('2d'),{
+    type:'line',data:{labels,datasets:[{label:'Sale value (₹)',data:trendData,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.08)',tension:.3,fill:true,pointRadius:3,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tickColor(),callback:v=>'₹'+Math.round(v/1000)+'K'},grid:{color:gridColor()}},x:{ticks:{color:tickColor(),maxRotation:45,autoSkip:true},grid:{color:gridColor()}}}}
+  });
+}
+
+// ── Procurement ─────────────────────────────────────────────────────
+function renderProcurement() {
+  const mtd=getMTD();
+  if(!mtd.length){document.getElementById('procMetrics').innerHTML='';showEmptyChart('wrapProc');showEmptyChart('wrapQual');destroyChart('chartProc');destroyChart('chartQual');return}
+  hideEmptyChart('wrapProc');hideEmptyChart('wrapQual');
+  const totalRecv=sum(mtd,'milk_received'),avgFat=avgIf(mtd,'fat_pct'),avgSnf=avgIf(mtd,'snf_pct'),avgRate=avgIf(mtd,'proc_rate'),totalPC=sum(mtd,'proc_cost');
+  document.getElementById('procMetrics').innerHTML=
+    `<div class="m"><div class="ml">Milk received (MTD)</div><div class="mv">${fmt(totalRecv)}<span class="mu"> L</span></div></div>
+     <div class="m"><div class="ml">Avg fat %</div><div class="mv">${fmtd(avgFat)}%</div></div>
+     <div class="m"><div class="ml">Avg SNF %</div><div class="mv">${fmtd(avgSnf)}%</div></div>
+     <div class="m"><div class="ml">Avg proc. rate</div><div class="mv">₹${fmtd(avgRate)}<span class="mu">/L</span></div></div>
+     <div class="m"><div class="ml">Procurement cost</div><div class="mv">₹${fmt(totalPC)}</div></div>`;
+  const labels=mtd.map(r=>r.date.slice(5));
+  destroyChart('chartProc');destroyChart('chartQual');
+  charts['chartProc']=new Chart(document.getElementById('chartProc').getContext('2d'),{
+    type:'bar',data:{labels,datasets:[{label:'Milk received (L)',data:mtd.map(r=>r.milk_received),backgroundColor:'#5DCAA5',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tickColor()},grid:{color:gridColor()}},x:{ticks:{color:tickColor(),maxRotation:45,autoSkip:true},grid:{display:false}}}}});
+  charts['chartQual']=new Chart(document.getElementById('chartQual').getContext('2d'),{
+    type:'line',data:{labels,datasets:[
+      {label:'Fat %',data:mtd.map(r=>r.fat_pct),borderColor:'#D85A30',tension:.3,pointRadius:3,borderWidth:2,yAxisID:'y'},
+      {label:'SNF %',data:mtd.map(r=>r.snf_pct),borderColor:'#7F77DD',tension:.3,pointRadius:3,borderWidth:2,borderDash:[5,5],yAxisID:'y'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tickColor(),callback:v=>v.toFixed(1)+'%'},grid:{color:gridColor()}},x:{ticks:{color:tickColor(),maxRotation:45,autoSkip:true},grid:{display:false}}}}});
+}
+
+// ── Processing ──────────────────────────────────────────────────────
+function renderProcessing() {
+  const mtd=getMTD();
+  if(!mtd.length){document.getElementById('proc2Metrics').innerHTML='';showEmptyChart('wrapCity');showEmptyChart('wrapDahi');destroyChart('chartCity');destroyChart('chartDahi');return}
+  hideEmptyChart('wrapCity');hideEmptyChart('wrapDahi');
+  const totalCap=sum(mtd,'proc_capacity'),totalCity=sum(mtd,'city_supply'),dahiCap=sum(mtd,'dahi_cap'),dahiProc=sum(mtd,'dahi_proc');
+  const util=totalCap?Math.round(totalCity/totalCap*100):0,dahiUtil=dahiCap?Math.round(dahiProc/dahiCap*100):0;
+  document.getElementById('proc2Metrics').innerHTML=
+    `<div class="m"><div class="ml">Proc. capacity (MTD)</div><div class="mv">${fmt(totalCap)}<span class="mu"> L</span></div></div>
+     <div class="m"><div class="ml">City supply (MTD)</div><div class="mv">${fmt(totalCity)}<span class="mu"> L</span></div></div>
+     <div class="m"><div class="ml">Milk util.</div><div class="mv">${util}%</div></div>
+     <div class="m"><div class="ml">Dahi util.</div><div class="mv">${dahiUtil}%</div></div>
+     <div class="m"><div class="ml">Dahi processed</div><div class="mv">${fmt(dahiProc)}<span class="mu"> kg</span></div></div>`;
+  const labels=mtd.map(r=>r.date.slice(5));
+  destroyChart('chartCity');destroyChart('chartDahi');
+  charts['chartCity']=new Chart(document.getElementById('chartCity').getContext('2d'),{
+    type:'bar',data:{labels,datasets:[{label:'Capacity (L)',data:mtd.map(r=>r.proc_capacity),backgroundColor:'rgba(55,138,221,0.25)',borderRadius:3},{label:'City supply (L)',data:mtd.map(r=>r.city_supply),backgroundColor:'#378ADD',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tickColor()},grid:{color:gridColor()}},x:{ticks:{color:tickColor(),maxRotation:45,autoSkip:true},grid:{display:false}}}}});
+  charts['chartDahi']=new Chart(document.getElementById('chartDahi').getContext('2d'),{
+    type:'bar',data:{labels,datasets:[{label:'Installed cap (kg)',data:mtd.map(r=>r.dahi_cap),backgroundColor:'rgba(212,83,126,0.25)',borderRadius:3},{label:'Processed (kg)',data:mtd.map(r=>r.dahi_proc),backgroundColor:'#D4537E',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tickColor()},grid:{color:gridColor()}},x:{ticks:{color:tickColor(),maxRotation:45,autoSkip:true},grid:{display:false}}}}});
+}
+
+// ── Financials ─────────────────────────────────────────────────────
+function renderFinancial() {
+  const mtd=getMTD();
+  if(!mtd.length){document.getElementById('finMetrics').innerHTML='';showEmptyChart('wrapCost');showEmptyChart('wrapRevCost');destroyChart('chartCost');destroyChart('chartRevCost');return}
+  hideEmptyChart('wrapCost');hideEmptyChart('wrapRevCost');
+  const grev=sum(mtd,'gross_revenue'),pcost=sum(mtd,'proc_cost'),vcost=sum(mtd,'var_cost'),pack=sum(mtd,'pack_cost'),power=sum(mtd,'power_cost'),man=sum(mtd,'man_cost'),over=sum(mtd,'overheads');
+  const totalCost=pcost+vcost+pack+power+man+over,margin=grev-totalCost;
+  document.getElementById('finMetrics').innerHTML=
+    `<div class="m"><div class="ml">Gross revenue (MTD)</div><div class="mv">₹${fmt(grev)}</div></div>
+     <div class="m"><div class="ml">Total cost (MTD)</div><div class="mv">₹${fmt(totalCost)}</div></div>
+     <div class="m"><div class="ml">Gross margin</div><div class="mv" style="color:${margin>=0?'var(--green)':'var(--red)'}">₹${fmt(margin)}</div></div>
+     <div class="m"><div class="ml">Procurement cost</div><div class="mv">₹${fmt(pcost)}</div></div>
+     <div class="m"><div class="ml">Variable cost</div><div class="mv">₹${fmt(vcost)}</div></div>
+     <div class="m"><div class="ml">Fixed costs</div><div class="mv">₹${fmt(power+man+over)}</div></div>
+     <div class="m"><div class="ml">Packaging cost</div><div class="mv">₹${fmt(pack)}</div></div>
+     <div class="m"><div class="ml">Margin %</div><div class="mv" style="color:${margin>=0?'var(--green)':'var(--red)'}">${grev?(margin/grev*100).toFixed(1):0}%</div></div>`;
+  destroyChart('chartCost');destroyChart('chartRevCost');
+  charts['chartCost']=new Chart(document.getElementById('chartCost').getContext('2d'),{
+    type:'bar',data:{labels:['Procurement','Variable','Packaging','Power','Manpower','Overheads'],datasets:[{label:'Cost (₹)',data:[pcost,vcost,pack,power,man,over],backgroundColor:['#378ADD','#1D9E75','#D85A30','#D4537E','#7F77DD','#888780'],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:tickColor(),callback:v=>'₹'+fmt(v)},grid:{color:gridColor()}},y:{ticks:{color:tickColor()},grid:{display:false}}}}});
+  const labels=mtd.map(r=>r.date.slice(5));
+  const revData=mtd.map(r=>r.gross_revenue),costData=mtd.map(r=>r.proc_cost+r.var_cost+r.pack_cost+r.power_cost+r.man_cost+r.overheads);
+  const avgRev=revData.length?Math.round(revData.reduce((a,b)=>a+b,0)/revData.length):0;
+  const avgCost=costData.length?Math.round(costData.reduce((a,b)=>a+b,0)/costData.length):0;
+  document.getElementById('revCostAvgLabel').textContent='— Rev avg: ₹'+fmt(avgRev)+' | Cost avg: ₹'+fmt(avgCost);
+  charts['chartRevCost']=new Chart(document.getElementById('chartRevCost').getContext('2d'),{
+    type:'line',data:{labels,datasets:[{label:'Gross revenue',data:revData,borderColor:'#1D9E75',tension:.3,pointRadius:3,borderWidth:2},{label:'Total cost',data:costData,borderColor:'#D85A30',tension:.3,pointRadius:3,borderWidth:2,borderDash:[5,5]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tickColor(),callback:v=>'₹'+Math.round(v/1000)+'K'},grid:{color:gridColor()}},x:{ticks:{color:tickColor(),maxRotation:45,autoSkip:true},grid:{display:false}}}}});
+}
+
+// ── History ─────────────────────────────────────────────────────────
+function getFilteredRecs() {
+  let recs = records;
+  const monthVal = document.getElementById('hMonth').value;
+  if (monthVal) recs = recs.filter(r => r.date.startsWith(monthVal));
+  const search = document.getElementById('histSearch').value.toLowerCase().trim();
+  if (search) {
+    recs = recs.filter(r => {
+      const vals = Object.values(r).join(' ').toLowerCase();
+      return vals.includes(search);
+    });
+  }
+  filteredRecs = recs;
+  return recs;
+}
+
+function applyHistFilter() { filteredRecs = null; renderHistory(); }
+function clearHistFilter() {
+  document.getElementById('hMonth').value = '';
+  document.getElementById('histSearch').value = '';
+  filteredRecs = null; renderHistory();
+}
+function debounceSearch() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => { applyHistFilter(); }, 300);
+}
+
+function sortHist(key) {
+  document.querySelectorAll('[id^="srt-"]').forEach(el => el.className = 'ti ti-arrows-sort');
+  if (_histSortKey === key) _histSortDir *= -1;
+  else { _histSortKey = key; _histSortDir = 1; }
+  const icon = document.getElementById('srt-' + key);
+  if (icon) icon.className = _histSortDir > 0 ? 'ti ti-sort-ascending' : 'ti ti-sort-descending';
+  renderHistory();
+}
+
+function renderHistory() {
+  const recs = getFilteredRecs();
+  if (_histSortKey) {
+    recs.sort((a, b) => {
+      const va = a[_histSortKey] || 0, vb = b[_histSortKey] || 0;
+      return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * _histSortDir;
+    });
+  }
+  const tb = document.getElementById('histBody');
+  document.getElementById('histCount').textContent = '— ' + recs.length + ' record' + (recs.length !== 1 ? 's' : '');
+  if (!recs.length) {
+    tb.innerHTML = '<tr><td colspan="23" style="text-align:center;color:var(--text3);padding:2rem">No records found. ' + (records.length ? 'Try a different filter.' : 'Start by adding daily entries.') + '</td></tr>';
+    return;
+  }
+  tb.innerHTML = [...recs].reverse().map(r => {
+    const tc = r.proc_cost+r.var_cost+r.pack_cost+r.power_cost+r.man_cost+r.overheads;
+    const margin = r.gross_revenue - tc;
+    const util = r.proc_capacity ? Math.round(r.city_supply/r.proc_capacity*100) : 0;
+    const dateSafe = r.date.replace(/'/g, "\\'");
+    return `<tr>
+      <td>${r.date}</td><td>₹${fmt(r.total_sale_value)}</td><td>${fmt(r.total_sale_volume)}</td>
+      <td>${fmt(r.milk_sale)}</td><td>${fmt(r.lassi_sale)}</td><td>${fmt(r.dahi_sale)}</td>
+      <td>${fmt(r.paneer_sale)}</td><td>${fmt(r.kheer_sale)}</td><td>${fmt(r.rabri_sale)}</td>
+      <td>${r.routes}</td><td>₹${fmt(r.institution_sale)}</td><td>${fmt(r.milk_received)}</td>
+      <td>${fmtd(r.fat_pct)}</td><td>${fmtd(r.snf_pct)}</td><td>${fmtd(r.proc_rate)}</td>
+      <td>${fmt(r.proc_capacity)}</td><td>${fmt(r.city_supply)}</td>
+      <td><span class="badge ${util>=80?'bg-g':util>=60?'bg-b':'bg-r'}">${util}%</span></td>
+      <td>₹${fmt(r.gross_revenue)}</td><td>₹${fmt(tc)}</td>
+      <td><span class="badge ${margin>=0?'bg-g':'bg-r'}">₹${fmt(margin)}</span></td>
+      <td><button class="btn btn-xs" onclick="editRec('${dateSafe}')"><i class="ti ti-edit"></i></button></td>
+      <td><button class="btn btn-xs" style="color:var(--red)" onclick="delRec('${dateSafe}')"><i class="ti ti-trash"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+
+function editRec(date) {
+  const r = records.find(x => x.date === date); if (!r) return;
+  const setv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+  setv('eDate', r.date); setv('eRoutes', r.routes);
+  setv('eTsv', r.total_sale_value); setv('eTvol', r.total_sale_volume);
+  setv('eMilk', r.milk_sale); setv('eLassi', r.lassi_sale); setv('eDahi', r.dahi_sale);
+  setv('ePaneer', r.paneer_sale); setv('eKheer', r.kheer_sale); setv('eRabri', r.rabri_sale);
+  setv('eInst', r.institution_sale);
+  setv('eRecv', r.milk_received); setv('eFat', r.fat_pct); setv('eSnf', r.snf_pct); setv('eRate', r.proc_rate);
+  setv('eCap', r.proc_capacity); setv('eCity', r.city_supply);
+  setv('eDahiCap', r.dahi_cap); setv('eDahiProc', r.dahi_proc);
+  setv('eGrev', r.gross_revenue); setv('ePcost', r.proc_cost); setv('eVcost', r.var_cost);
+  setv('ePack', r.pack_cost); setv('ePower', r.power_cost); setv('eMan', r.man_cost); setv('eOver', r.overheads);
+  _formOrig = JSON.stringify(getFormData());
+  hasUnsaved = false; document.getElementById('unsavedBadge').classList.remove('show');
+  navigate('entry');
+  setEntryLabel();
+  toast('Loaded ' + date + ' — edit and save');
+}
+
+function delRec(date) {
+  if (!confirm('Delete entry for ' + date + '?')) return;
+  records = records.filter(r => r.date !== date);
+  save(); if (document.getElementById('page-history').classList.contains('active')) renderHistory(); toast('Deleted ' + date);
+}
+
+function clearAll() {
+  if (!confirm('Delete ALL records? This cannot be undone.')) return;
+  records = []; filteredRecs = null;
+  save(); if (document.getElementById('page-history').classList.contains('active')) renderHistory(); toast('All records cleared');
+}
+
+// ── Drag & Drop Import ─────────────────────────────────────────────
+const uploadArea = document.getElementById('uploadArea');
+['dragenter','dragover'].forEach(evt => {
+  uploadArea.addEventListener(evt, e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+});
+['dragleave','drop'].forEach(evt => {
+  uploadArea.addEventListener(evt, e => { e.preventDefault(); uploadArea.classList.remove('drag-over'); });
+});
+uploadArea.addEventListener('drop', e => {
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('fileIn').files = e.dataTransfer.files; handleImport({ target: { files: [file] } }); }
+});
+
+// ── Import with Preview ─────────────────────────────────────────────
+function handleImport(event) {
+  const file = event.target.files[0]; if (!file) return;
+  document.getElementById('importPreview').innerHTML = '<div style="margin-top:12px;padding:12px;text-align:center;color:var(--text3);font-size:13px"><i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Reading file...</div>';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let rows = [];
+    try {
+      if (file.name.match(/\.(csv|txt)$/i)) {
+        const text = e.target.result;
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) throw new Error('File has no data rows');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, '').replace(/ /g,'_'));
+        for (let i = 1; i < lines.length; i++) {
+          const vals = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+          if (!vals[0]) continue;
+          const row = {}; headers.forEach((h, j) => row[h] = vals[j] !== undefined ? vals[j] : '');
+          if (row.date) rows.push(row);
+        }
+      } else {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        rows = rows.map(r => { const nr = {}; Object.keys(r).forEach(k => nr[k.trim().toLowerCase().replace(/ /g,'_')] = r[k]); return nr; });
+      }
+    } catch (err) {
+      document.getElementById('importPreview').innerHTML = `<div style="margin-top:12px;padding:12px 16px;background:var(--red-bg);color:var(--red-text);border-radius:var(--radius);border:1px solid var(--red);font-size:13px"><strong>Error:</strong> ${err.message}</div>`;
+      event.target.value = ''; return;
+    }
+    if (!rows.length) {
+      document.getElementById('importPreview').innerHTML = '<p style="color:var(--red);margin-top:12px">No valid rows found. Check column names.</p>';
+      event.target.value = ''; return;
+    }
+
+    // Validate & categorize rows
+    const validated = rows.map((r, idx) => {
+      let dateStr = r.date;
+      if (typeof dateStr === 'number') {
+        try { const d = new Date((dateStr - 25569) * 86400 * 1000); dateStr = d.toISOString().split('T')[0]; } catch(e) { dateStr = String(dateStr); }
+      } else { dateStr = String(dateStr).trim(); }
+      const rec = {
+        date: dateStr, routes: parseFloat(r.routes) || 0,
+        total_sale_value: parseFloat(r.total_sale_value) || 0, total_sale_volume: parseFloat(r.total_sale_volume) || 0,
+        milk_sale: parseFloat(r.milk_sale) || 0, lassi_sale: parseFloat(r.lassi_sale) || 0, dahi_sale: parseFloat(r.dahi_sale) || 0,
+        paneer_sale: parseFloat(r.paneer_sale) || 0, kheer_sale: parseFloat(r.kheer_sale) || 0, rabri_sale: parseFloat(r.rabri_sale) || 0,
+        institution_sale: parseFloat(r.institution_sale) || 0,
+        milk_received: parseFloat(r.milk_received) || 0, fat_pct: parseFloat(r.fat_pct) || 0, snf_pct: parseFloat(r.snf_pct) || 0, proc_rate: parseFloat(r.proc_rate) || 0,
+        proc_capacity: parseFloat(r.proc_capacity) || 0, city_supply: parseFloat(r.city_supply) || 0,
+        dahi_cap: parseFloat(r.dahi_cap) || 0, dahi_proc: parseFloat(r.dahi_proc) || 0,
+        gross_revenue: parseFloat(r.gross_revenue) || 0, proc_cost: parseFloat(r.proc_cost) || 0, var_cost: parseFloat(r.var_cost) || 0,
+        pack_cost: parseFloat(r.pack_cost) || 0, power_cost: parseFloat(r.power_cost) || 0, man_cost: parseFloat(r.man_cost) || 0, overheads: parseFloat(r.overheads) || 0
+      };
+      const errs = validateRecord({ ...rec, date: dateStr });
+      const exists = records.findIndex(x => x.date === dateStr) >= 0;
+      return { idx: idx + 2, rec, errs, exists, dateStr };
+    });
+
+    importData = validated;
+    showImportModal(validated);
+    event.target.value = '';
+  };
+  reader.onerror = () => toast('Error reading file', 'e');
+  if (file.name.match(/\.(xlsx|xls)$/i)) reader.readAsArrayBuffer(file);
+  else reader.readAsText(file);
+}
+
+function showImportModal(data) {
+  const total = data.length;
+  const valid = data.filter(d => !d.errs.length);
+  const errors = data.filter(d => d.errs.length);
+  const newRecs = data.filter(d => !d.errs.length && !d.exists);
+  const updRecs = data.filter(d => !d.errs.length && d.exists);
+
+  document.getElementById('importModalTitle').textContent = `Import Preview — ${total} rows`;
+  document.getElementById('importConfirmBtn').innerHTML = `<i class="ti ti-upload"></i> Import ${valid.length} records`;
+  document.getElementById('importConfirmBtn').disabled = valid.length === 0;
+
+  let html = `
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="flex:1;min-width:100px;padding:10px;background:var(--bg2);border-radius:var(--radius);text-align:center">
+        <div style="font-size:22px;font-weight:600;color:var(--text)">${total}</div>
+        <div style="font-size:11px;color:var(--text3)">Total rows</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:10px;background:var(--green-bg);border-radius:var(--radius);text-align:center">
+        <div style="font-size:22px;font-weight:600;color:var(--green-text)">${newRecs.length}</div>
+        <div style="font-size:11px;color:var(--green-text)">New</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:10px;background:var(--blue-bg);border-radius:var(--radius);text-align:center">
+        <div style="font-size:22px;font-weight:600;color:var(--blue-text)">${updRecs.length}</div>
+        <div style="font-size:11px;color:var(--blue-text)">Updates</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:10px;background:var(--red-bg);border-radius:var(--radius);text-align:center">
+        <div style="font-size:22px;font-weight:600;color:var(--red-text)">${errors.length}</div>
+        <div style="font-size:11px;color:var(--red-text)">Errors</div>
+      </div>
+    </div>`;
+
+  if (errors.length) {
+    html += `<div style="margin-bottom:12px;padding:10px 14px;background:var(--red-bg);border-radius:var(--radius);font-size:12px;color:var(--red-text)">
+      <strong>${errors.length} row(s)</strong> have validation errors and will be skipped. Fix them in your file and re-import.`;
+    errors.slice(0, 3).forEach(e => {
+      html += `<div style="margin-top:4px">• Row ${e.idx}: ${e.dateStr || '(no date)'} — ${e.errs.join('; ')}</div>`;
+    });
+    if (errors.length > 3) html += `<div style="margin-top:4px">• ...and ${errors.length - 3} more</div>`;
+    html += `</div>`;
+  }
+
+  html += `<div class="tw"><table class="ip-table">
+    <thead><tr><th>#</th><th>Status</th><th>Date</th><th>Sale (₹)</th><th>Volume</th><th>Milk</th><th>Lassi</th><th>Dahi</th><th>Paneer</th><th>Recv (L)</th><th>Fat%</th><th>Rev (₹)</th><th>Cost (₹)</th></tr></thead><tbody>`;
+  data.forEach(d => {
+    const cls = d.errs.length ? 'ip-row-err' : d.exists ? 'ip-row-upd' : 'ip-row-new';
+    const badge = d.errs.length ? '<span class="ip-badge ip-badge-err">Error</span>' : d.exists ? '<span class="ip-badge ip-badge-upd">Update</span>' : '<span class="ip-badge ip-badge-new">New</span>';
+    const tc = d.rec.proc_cost + d.rec.var_cost + d.rec.pack_cost + d.rec.power_cost + d.rec.man_cost + d.rec.overheads;
+    html += `<tr class="${cls}">
+      <td>${d.idx}</td><td>${badge}</td>
+      <td>${d.dateStr}</td><td>${fmt(d.rec.total_sale_value)}</td><td>${fmt(d.rec.total_sale_volume)}</td>
+      <td>${fmt(d.rec.milk_sale)}</td><td>${fmt(d.rec.lassi_sale)}</td><td>${fmt(d.rec.dahi_sale)}</td>
+      <td>${fmt(d.rec.paneer_sale)}</td><td>${fmt(d.rec.milk_received)}</td>
+      <td>${fmtd(d.rec.fat_pct)}</td><td>₹${fmt(d.rec.gross_revenue)}</td><td>₹${fmt(tc)}</td>
+    </tr>`;
+    if (d.errs.length) html += `<tr class="${cls}"><td colspan="13"><span class="ip-err">⚠ ${d.errs.join('; ')}</span></td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  document.getElementById('importModalBody').innerHTML = html;
+  document.getElementById('importModal').classList.add('show');
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('show');
+  importData = null;
+}
+
+function confirmImport() {
+  if (!importData) return;
+  const valid = importData.filter(d => !d.errs.length);
+  let merged = 0, added = 0;
+  valid.forEach(d => {
+    const idx = records.findIndex(x => x.date === d.dateStr);
+    if (idx >= 0) { records[idx] = d.rec; merged++; }
+    else { records.push(d.rec); added++; }
+  });
+  records.sort((a, b) => a.date.localeCompare(b.date));
+  save();
+  closeImportModal();
+  document.getElementById('importPreview').innerHTML =
+    `<div style="margin-top:12px;padding:12px 16px;background:var(--green-bg);color:var(--green-text);border-radius:var(--radius);border:1px solid var(--green);font-size:13px">
+     <strong>Import successful!</strong> ${added} new, ${merged} updated. Total: ${records.length} records.</div>`;
+  toast('Imported ' + valid.length + ' rows');
+}
+
+// ── Professional Excel Export ──────────────────────────────────────
+function exportExcel() {
+  if (_exporting) return;
+  _exporting = true;
+  const recs = filteredRecs || records;
+  if (!recs.length) { _exporting = false; toast('No records to export', 'e'); return; }
+
+  // Lazy-load ExcelJS
+  if (typeof ExcelJS === 'undefined') {
+    document.getElementById('exportBtn').innerHTML = '<i class="ti ti-loader"></i> Loading...';
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    script.onload = () => { setTimeout(() => buildExcel(recs), 50); };
+    script.onerror = () => {
+      _exporting = false;
+      toast('ExcelJS failed to load, using fallback', 'w');
+      fallbackExcel(recs);
+      document.getElementById('exportBtn').innerHTML = '<i class="ti ti-file-spreadsheet"></i><span>Excel</span>';
+    };
+    document.body.appendChild(script);
+    return;
+  }
+  buildExcel(recs);
+}
+
+async function buildExcel(recs) {
+  const btn = document.getElementById('exportBtn');
+  btn.innerHTML = '<i class="ti ti-loader"></i> Generating...';
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Dairy Dashboard';
+    wb.created = new Date();
+
+    // ── Sheet 1: Daily Records ──
+    const ws1 = wb.addWorksheet('Daily Records', {
+      views: [{ state: 'frozen', ySplit: 1 }]
+    });
+
+    const headers = [
+      'Date','Routes','Sale Value (₹)','Sale Vol (L)','Milk (L)','Lassi','Dahi (kg)',
+      'Paneer (kg)','Kheer (kg)','Rabri (kg)','Institution (₹)',
+      'Milk Recv (L)','Fat %','SNF %','Proc Rate (₹/L)',
+      'Proc Cap (L)','City Supply (L)','Dahi Cap (kg)','Dahi Proc (kg)',
+      'Gross Rev (₹)','Proc Cost (₹)','Var Cost (₹)','Pack Cost (₹)',
+      'Power (₹)','Manpower (₹)','Overheads (₹)','Total Cost (₹)','Margin (₹)'
+    ];
+
+    // Header row
+    const hRow = ws1.addRow(headers);
+    hRow.height = 28;
+    hRow.eachCell(cell => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A6FBA' } };
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+      };
+    });
+
+    // Data rows
+    recs.forEach((r, i) => {
+      const tc = r.proc_cost + r.var_cost + r.pack_cost + r.power_cost + r.man_cost + r.overheads;
+      const margin = r.gross_revenue - tc;
+      const row = ws1.addRow([
+        r.date, r.routes, r.total_sale_value, r.total_sale_volume, r.milk_sale, r.lassi_sale, r.dahi_sale,
+        r.paneer_sale, r.kheer_sale, r.rabri_sale, r.institution_sale,
+        r.milk_received, r.fat_pct, r.snf_pct, r.proc_rate,
+        r.proc_capacity, r.city_supply, r.dahi_cap, r.dahi_proc,
+        r.gross_revenue, r.proc_cost, r.var_cost, r.pack_cost,
+        r.power_cost, r.man_cost, r.overheads, tc, margin
+      ]);
+      const bgColor = i % 2 === 0 ? 'FFF9F9F9' : 'FFFFFFFF';
+      const marginColor = margin >= 0 ? 'FFE8F5E9' : 'FFFFEBEE';
+      row.eachCell((cell, colIdx) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colIdx === 28 ? marginColor : bgColor } };
+        cell.alignment = { vertical: 'middle', horizontal: colIdx === 1 ? 'left' : 'right' };
+        cell.font = { size: 10, name: 'Calibri', color: { argb: colIdx === 28 && margin < 0 ? 'FFD32F2F' : 'FF333333' } };
+        cell.border = {
+          bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+        };
+        if (colIdx === 13 || colIdx === 14) cell.numFmt = '0.0';
+        else if (colIdx === 15) cell.numFmt = '#,##0.00';
+        else if (colIdx >= 3) cell.numFmt = '#,##0';
+      });
+    });
+
+    // Column widths
+    const colWidths = [12, 8, 14, 12, 10, 8, 10, 12, 10, 10, 14, 14, 8, 8, 12, 14, 14, 12, 12, 14, 14, 14, 14, 12, 14, 12, 14, 14];
+    colWidths.forEach((w, i) => { ws1.getColumn(i + 1).width = w; });
+
+    // ── Sheet 2: MTD Summary ──
+    const ws2 = wb.addWorksheet('MTD Summary');
+    ws2.columns = [{ width: 40 }, { width: 20 }];
+
+    ws2.addRow(['Dairy Operations — MTD Summary', '']).eachCell(c => {
+      c.font = { bold: true, size: 14, color: { argb: 'FF1A6FBA' }, name: 'Calibri' };
+    });
+    ws2.addRow(['Month', monthName()]).eachCell(c => c.font = { size: 11, name: 'Calibri' });
+    ws2.addRow([]);
+
+    const summaryRows = [
+      ['Metric', 'Value'],
+      ['Total Sale Value (₹)', sum(recs, 'total_sale_value')],
+      ['Total Volume (L)', sum(recs, 'total_sale_volume')],
+      ['Total Institution Sale (₹)', sum(recs, 'institution_sale')],
+      ['Total Milk Received (L)', sum(recs, 'milk_received')],
+      ['Avg Fat %', parseFloat(avgIf(recs, 'fat_pct').toFixed(2))],
+      ['Avg SNF %', parseFloat(avgIf(recs, 'snf_pct').toFixed(2))],
+      ['Avg Procurement Rate (₹/L)', parseFloat(avgIf(recs, 'proc_rate').toFixed(2))],
+      ['Gross Revenue (₹)', sum(recs, 'gross_revenue')],
+      ['Procurement Cost (₹)', sum(recs, 'proc_cost')],
+      ['Variable Cost (₹)', sum(recs, 'var_cost')],
+      ['Packaging Cost (₹)', sum(recs, 'pack_cost')],
+      ['Power Cost (₹)', sum(recs, 'power_cost')],
+      ['Manpower Cost (₹)', sum(recs, 'man_cost')],
+      ['Overheads (₹)', sum(recs, 'overheads')],
+      [],
+      ['Total Cost (₹)', sum(recs, 'proc_cost') + sum(recs, 'var_cost') + sum(recs, 'pack_cost') + sum(recs, 'power_cost') + sum(recs, 'man_cost') + sum(recs, 'overheads')],
+      ['Gross Margin (₹)', sum(recs, 'gross_revenue') - (sum(recs, 'proc_cost') + sum(recs, 'var_cost') + sum(recs, 'pack_cost') + sum(recs, 'power_cost') + sum(recs, 'man_cost') + sum(recs, 'overheads'))],
+      ['Days Recorded', recs.length]
+    ];
+
+    summaryRows.forEach((row, i) => {
+      const r = ws2.addRow(row);
+      if (i === 0) {
+        r.eachCell(c => {
+          c.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A6FBA' } };
+          c.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+      } else {
+        r.eachCell((c, idx) => {
+          c.font = { size: 11, name: 'Calibri' };
+          if (idx === 2 && typeof row[1] === 'number') {
+            c.numFmt = '#,##0';
+            c.alignment = { horizontal: 'right' };
+          }
+        });
+      }
+    });
+
+    const month = (filteredRecs && document.getElementById('hMonth')?.value) || 'all';
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dairy_ops_' + month + '.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
+    _exporting = false;
+    toast('Excel downloaded — professionally formatted!');
+  } catch (err) {
+    _exporting = false;
+    console.error(err);
+    toast('Excel generation failed, using fallback', 'w');
+    fallbackExcel(recs);
+  }
+  btn.innerHTML = '<i class="ti ti-file-spreadsheet"></i><span>Excel</span>';
+}
+
+// ── Fallback Excel Export (xlsx) ────────────────────────────────────
+function fallbackExcel(recs) {
+  const headers = [
+    'Date','Routes','Total Sale Value (₹)','Total Sale Volume (L)','Milk Sale (L)','Lassi Sale','Dahi Sale (kg)',
+    'Paneer Sale (kg)','Kheer Sale (kg)','Rabri Sale (kg)','Institution Sale (₹)',
+    'Milk Received (L)','Fat %','SNF %','Procurement Rate (₹/L)',
+    'Processing Capacity (L)','City Supply (L)','Dahi Installed Cap (kg)','Dahi Processed (kg)',
+    'Gross Revenue (₹)','Procurement Cost (₹)','Variable Cost (₹)','Packaging Cost (₹)',
+    'Power Cost (₹)','Manpower Cost (₹)','Overheads (₹)','Total Cost (₹)','Gross Margin (₹)'
+  ];
+  const rows = recs.map(r => {
+    const tc = r.proc_cost+r.var_cost+r.pack_cost+r.power_cost+r.man_cost+r.overheads;
+    return [r.date,r.routes,r.total_sale_value,r.total_sale_volume,r.milk_sale,r.lassi_sale,r.dahi_sale,
+      r.paneer_sale,r.kheer_sale,r.rabri_sale,r.institution_sale,r.milk_received,r.fat_pct,r.snf_pct,r.proc_rate,
+      r.proc_capacity,r.city_supply,r.dahi_cap,r.dahi_proc,r.gross_revenue,r.proc_cost,r.var_cost,r.pack_cost,
+      r.power_cost,r.man_cost,r.overheads,tc,r.gross_revenue-tc];
+  });
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = headers.map(() => ({ wch: 22 }));
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['Metric','Value'],
+    ['Total Sale Value (₹)', sum(recs,'total_sale_value')],
+    ['Total Volume (L)', sum(recs,'total_sale_volume')],
+    ['Total Institution Sale (₹)', sum(recs,'institution_sale')],
+    ['Total Milk Received (L)', sum(recs,'milk_received')],
+    ['Avg Fat %', parseFloat(avgIf(recs,'fat_pct').toFixed(2))],
+    ['Avg SNF %', parseFloat(avgIf(recs,'snf_pct').toFixed(2))],
+    ['Avg Procurement Rate (₹/L)', parseFloat(avgIf(recs,'proc_rate').toFixed(2))],
+    ['Gross Revenue (₹)', sum(recs,'gross_revenue')],
+    ['Total Procurement Cost (₹)', sum(recs,'proc_cost')],
+    ['Total Variable Cost (₹)', sum(recs,'var_cost')],
+    ['Total Packaging Cost (₹)', sum(recs,'pack_cost')],
+    ['Total Power Cost (₹)', sum(recs,'power_cost')],
+    ['Total Manpower Cost (₹)', sum(recs,'man_cost')],
+    ['Total Overheads (₹)', sum(recs,'overheads')],
+  ]);
+  ws2['!cols'] = [{ wch: 35 }, { wch: 20 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Daily Records');
+  XLSX.utils.book_append_sheet(wb, ws2, 'MTD Summary');
+  const month = (filteredRecs && document.getElementById('hMonth')?.value) || 'all';
+  _exporting = false;
+  XLSX.writeFile(wb, 'dairy_ops_' + month + '.xlsx');
+  toast('Excel downloaded');
+  document.getElementById('exportBtn').innerHTML = '<i class="ti ti-file-spreadsheet"></i><span>Excel</span>';
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+document.getElementById('eDate').value = new Date().toISOString().split('T')[0];
+_formOrig = JSON.stringify(getFormData());
+setEntryLabel();
+
+// Handle initial route
+syncMonthFilter();
+applyRoute(getRoute());
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    if (document.getElementById('page-entry').classList.contains('active')) saveEntry();
+  }
+  if (e.key === 'Escape') { closeSidebar(); closeImportModal(); }
+});
+
+// Beforeunload warning
+window.addEventListener('beforeunload', e => {
+  if (hasUnsaved) { e.preventDefault(); e.returnValue = ''; }
+});
+</script>
+</body>
+</html>
