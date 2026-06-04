@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dairy Operations Dashboard — daily procurement, processing, VAP, and sales tracking." />
+  <meta name="theme-color" content="#0f1117" />
+  <title>Verka Ferozepur — Daily Report Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <link rel="manifest" href="/manifest.json" />
+
+  <link rel="stylesheet" href="/src/style.css" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <button class="hamburger" id="hamburgerBtn" aria-label="Toggle navigation" title="Toggle Sidebar">
+      <i class="ti ti-menu-2"></i>
+    </button>
+    <div class="brand">
+      <div class="brand-icon"><img src="/verka.png" alt="Verka" class="brand-logo" /></div>
+      <div class="brand-text">
+        <span class="brand-name">Verka Ferozepur</span>
+        <span class="brand-sub" id="brandSub">Daily Report</span>
+      </div>
+    </div>
+  </div>
+  <div class="topbar-center">
+    <nav class="topnav" role="navigation" aria-label="Quick navigation">
+      <button class="topnav-btn active" data-route="entry">Entry</button>
+      <button class="topnav-btn" data-route="summary">Summary</button>
+      <button class="topnav-btn" data-route="procurement">Procurement</button>
+      <button class="topnav-btn" data-route="processing">Processing</button>
+    </nav>
+  </div>
+  <div class="topbar-right">
+    <span class="unsaved-pill" id="unsavedPill"><i class="ti ti-point-filled"></i> Unsaved</span>
+    <button class="icon-btn" id="shortcutsBtn" title="Keyboard shortcuts (?)">
+      <i class="ti ti-keyboard"></i>
+    </button>
+    <button class="icon-btn" id="themeBtn" title="Toggle theme">
+      <i class="ti ti-moon" id="themeIcon"></i>
+    </button>
+    <button class="btn btn-primary btn-sm" id="exportBtn" title="Export to Excel">
+      <i class="ti ti-file-spreadsheet"></i>
+      <span>Export</span>
+    </button>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-layout">
+
+  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-scroll">
+      <div class="sidebar-section-label">Main</div>
+      <button class="nav-item active" data-route="entry">
+        <i class="ti ti-plus"></i>
+        <span>Daily Entry</span>
+      </button>
+      <button class="nav-item" data-route="summary">
+        <i class="ti ti-layout-dashboard"></i>
+        <span>MTD Summary</span>
+      </button>
+
+      <div class="sidebar-section-label">Departments</div>
+      <button class="nav-item" data-route="marketing">
+        <i class="ti ti-trending-up"></i>
+        <span>Marketing</span>
+      </button>
+      <button class="nav-item" data-route="procurement">
+        <i class="ti ti-droplet"></i>
+        <span>Procurement</span>
+      </button>
+      <button class="nav-item" data-route="processing">
+        <i class="ti ti-settings-2"></i>
+        <span>Processing</span>
+      </button>
+      <button class="nav-item" data-route="vap">
+        <i class="ti ti-salad"></i>
+        <span>VAP Manufacturing</span>
+      </button>
+
+      <div class="sidebar-section-label">Intelligence</div>
+      <button class="nav-item" data-route="analytics">
+        <i class="ti ti-chart-dots"></i>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-item" data-route="goals">
+        <i class="ti ti-target"></i>
+        <span>Goals</span>
+      </button>
+
+      <div class="sidebar-section-label">Data</div>
+      <button class="nav-item" data-route="history">
+        <i class="ti ti-history"></i>
+        <span>History</span>
+      </button>
+      <button class="nav-item" data-route="import">
+        <i class="ti ti-upload"></i>
+        <span>Import</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-stats" id="sidebarStats"></div>
+      <div class="sidebar-saved" id="sidebarSaved"></div>
+    </div>
+  </aside>
+
+  <main class="main-content" id="mainContent" role="main">
+
+    <!-- ═══ ENTRY PAGE ═══ -->
+    <div id="page-entry" class="page active">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-plus"></i> Daily Entry <span class="page-subtitle" id="entryDateLabel"></span></div>
+        <button class="btn btn-ghost btn-sm" onclick="todayDate()"><i class="ti ti-calendar-today"></i> Today</button>
+      </div>
+      <div id="entryKpis" class="kpi-grid" style="margin-bottom:20px"></div>
+      <div class="empty-guide" id="entryEmptyGuide">
+        <i class="ti ti-clipboard-list"></i>
+        <h3>Welcome to Verka Ferozepur Dashboard</h3>
+        <p>Start by entering today's operations data below. Each department updates their own section.</p>
+        <p><small>Tip: Use <kbd>Ctrl+S</kbd> to save, <kbd>Ctrl+E</kbd> to export to Excel</small></p>
+      </div>
+      <div class="card form-card">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eDate">Date</label>
+            <input type="date" id="eDate" class="form-input" />
+          </div>
+        </div>
+
+        <!-- ─── Marketing / Sales ─── -->
+        <div class="section-divider"><i class="ti ti-trending-up"></i> Marketing &amp; Sales</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="eTsv">Total Sale Value (₹ Lakh)</label>
+            <input type="number" id="eTsv" class="form-input" placeholder="e.g. 125.50" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="eTvol">Total Sale Volume (KL)</label>
+            <input type="number" id="eTvol" class="form-input" placeholder="e.g. 85.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="eRoutes">Routes</label>
+            <input type="number" id="eRoutes" class="form-input" placeholder="e.g. 12" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="eInst">Institutional / B2B Sale (₹ Lakh)</label>
+            <input type="number" id="eInst" class="form-input" placeholder="e.g. 25.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="eExports">Exports / Out-of-State (₹ Lakh)</label>
+            <input type="number" id="eExports" class="form-input" placeholder="e.g. 5.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="eAvgReal">Avg Realization (₹/Kg)</label>
+            <input type="number" id="eAvgReal" class="form-input" placeholder="e.g. 48.50" step="0.01" />
+          </div>
+        </div>
+
+        <!-- ─── Procurement ─── -->
+        <div class="section-divider"><i class="ti ti-droplet"></i> Milk Procurement</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="eRecv">Total Milk Received (LPD)</label>
+            <input type="number" id="eRecv" class="form-input" placeholder="e.g. 250000" />
+          </div>
+          <div class="form-group">
+            <label for="eFat">Fat (%)</label>
+            <input type="number" id="eFat" class="form-input" placeholder="e.g. 6.50" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="eSnf">SNF (%)</label>
+            <input type="number" id="eSnf" class="form-input" placeholder="e.g. 9.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="eOwn">Milk from Own Societies (LPD)</label>
+            <input type="number" id="eOwn" class="form-input" placeholder="e.g. 180000" />
+          </div>
+          <div class="form-group">
+            <label for="eDirect">Milk from Direct/Market (LPD)</label>
+            <input type="number" id="eDirect" class="form-input" placeholder="e.g. 70000" />
+          </div>
+          <div class="form-group">
+            <label for="eRate">Avg Procurement Price (₹/Kg)</label>
+            <input type="number" id="eRate" class="form-input" placeholder="e.g. 35.50" step="0.01" />
+          </div>
+        </div>
+
+        <!-- ─── Processing ─── -->
+        <div class="section-divider"><i class="ti ti-building-factory-2"></i> Processing</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="eMilkProc">Total Milk Processed (LPD)</label>
+            <input type="number" id="eMilkProc" class="form-input" placeholder="e.g. 220000" />
+          </div>
+          <div class="form-group">
+            <label for="eCap">Installed Processing Capacity (LPD)</label>
+            <input type="number" id="eCap" class="form-input" placeholder="e.g. 300000" />
+          </div>
+          <div class="form-group">
+            <label for="eCity">City Supply — Liquid Milk Packed (LPD)</label>
+            <input type="number" id="eCity" class="form-input" placeholder="e.g. 80000" />
+          </div>
+          <div class="form-group">
+            <label for="eCityCap">City Supply Installed Capacity (LPD)</label>
+            <input type="number" id="eCityCap" class="form-input" placeholder="e.g. 100000" />
+          </div>
+        </div>
+
+        <!-- ─── VAP Manufacturing ─── -->
+        <div class="section-divider"><i class="ti ti-salad"></i> VAP Manufacturing</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="eDahi">Dahi / Curd (KgPD)</label>
+            <input type="number" id="eDahi" class="form-input" placeholder="e.g. 2500" />
+          </div>
+          <div class="form-group">
+            <label for="eLassi">Lassi (LPD)</label>
+            <input type="number" id="eLassi" class="form-input" placeholder="e.g. 800" />
+          </div>
+          <div class="form-group">
+            <label for="ePaneer">Paneer (KgPD)</label>
+            <input type="number" id="ePaneer" class="form-input" placeholder="e.g. 350" />
+          </div>
+          <div class="form-group">
+            <label for="eGhee">Ghee (KgPD)</label>
+            <input type="number" id="eGhee" class="form-input" placeholder="e.g. 200" />
+          </div>
+          <div class="form-group">
+            <label for="eMPowder">Milk Powder (KgPD)</label>
+            <input type="number" id="eMPowder" class="form-input" placeholder="e.g. 1500" />
+          </div>
+          <div class="form-group">
+            <label for="eIceCream">Ice Cream (LPD)</label>
+            <input type="number" id="eIceCream" class="form-input" placeholder="e.g. 300" />
+          </div>
+          <div class="form-group">
+            <label for="eKheer">Kheer (KgPD)</label>
+            <input type="number" id="eKheer" class="form-input" placeholder="e.g. 100" />
+          </div>
+          <div class="form-group">
+            <label for="eRabri">Rabri (KgPD)</label>
+            <input type="number" id="eRabri" class="form-input" placeholder="e.g. 60" />
+          </div>
+          <div class="form-group">
+            <label for="eKaju">Kaju Badam Milk (LPD)</label>
+            <input type="number" id="eKaju" class="form-input" placeholder="e.g. 40" />
+          </div>
+          <div class="form-group">
+            <label for="eSweets">Sweets (KgPD)</label>
+            <input type="number" id="eSweets" class="form-input" placeholder="e.g. 120" />
+          </div>
+          <div class="form-group">
+            <label for="eButter">Table Butter (KgPD)</label>
+            <input type="number" id="eButter" class="form-input" placeholder="e.g. 80" />
+          </div>
+          <div class="form-group">
+            <label for="eCheese">Cheese (KgPD)</label>
+            <input type="number" id="eCheese" class="form-input" placeholder="e.g. 50" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" id="saveEntryBtn"><i class="ti ti-device-floppy"></i> Save Entry</button>
+          <button class="btn btn-ghost" id="clearFormBtn"><i class="ti ti-refresh"></i> Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SUMMARY PAGE ═══ -->
+    <div id="page-summary" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-layout-dashboard"></i> MTD Summary <span class="page-subtitle" id="summaryMonthLabel"></span></div>
+      </div>
+      <div id="summaryKpis" class="kpi-grid"></div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">Sales Value Trend (₹ Lakh) <span class="chart-sub" id="trendAvgLabel"></span></div>
+          <div class="chart-wrap" id="wrapTrend"><canvas id="chartTrend"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Milk Received vs Processed (LPD)</div>
+          <div class="chart-wrap" id="wrapMilkComp"><canvas id="chartMilkComp"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">VAP Production — MTD</div>
+          <div class="chart-wrap" id="wrapVap"><canvas id="chartVap"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Fat % &amp; SNF % Trend</div>
+          <div class="chart-wrap" id="wrapQual"><canvas id="chartQual"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MARKETING PAGE ═══ -->
+    <div id="page-marketing" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-trending-up"></i> Marketing</div>
+      </div>
+      <div id="markKpis" class="kpi-grid"></div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">Daily Sale Value (₹ Lakh)</div>
+          <div class="chart-wrap" id="wrapMarkVal"><canvas id="chartMarkVal"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Daily Sale Volume (KL)</div>
+          <div class="chart-wrap" id="wrapMarkVol"><canvas id="chartMarkVol"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Routes Covered</div>
+        <div class="chart-wrap" id="wrapRoutes"><canvas id="chartRoutes"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ═══ PROCUREMENT PAGE ═══ -->
+    <div id="page-procurement" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-droplet"></i> Procurement</div>
+      </div>
+      <div id="procKpis" class="kpi-grid"></div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">Daily Milk Received (LPD)</div>
+          <div class="chart-wrap" id="wrapProcRecv"><canvas id="chartProcRecv"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Own Societies vs Direct/Market</div>
+          <div class="chart-wrap" id="wrapProcSource"><canvas id="chartProcSource"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Avg Procurement Price Trend (₹/Kg)</div>
+        <div class="chart-wrap" id="wrapProcRate"><canvas id="chartProcRate"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ═══ PROCESSING PAGE ═══ -->
+    <div id="page-processing" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-settings-2"></i> Processing</div>
+      </div>
+      <div id="proc2Kpis" class="kpi-grid"></div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">Milk Processed vs Capacity (LPD)</div>
+          <div class="chart-wrap" id="wrapProcVol"><canvas id="chartProcVol"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">City Supply vs Capacity (LPD)</div>
+          <div class="chart-wrap" id="wrapCitySupp"><canvas id="chartCitySupp"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VAP MANUFACTURING PAGE ═══ -->
+    <div id="page-vap" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-salad"></i> VAP Manufacturing</div>
+      </div>
+      <div id="vapKpis" class="kpi-grid"></div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">Dahi &amp; Lassi Production (Kg/L)</div>
+          <div class="chart-wrap" id="wrapVapDahi"><canvas id="chartVapDahi"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Other VAP Products (Kg/L)</div>
+          <div class="chart-wrap" id="wrapVapOther"><canvas id="chartVapOther"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ANALYTICS PAGE ═══ -->
+    <div id="page-analytics" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-chart-dots"></i> Analytics <span class="page-subtitle">Multi-Month Trends</span></div>
+        <div class="page-controls">
+          <select id="analyticsMonths" class="form-select-sm">
+            <option value="3">Last 3 months</option>
+            <option value="6" selected>Last 6 months</option>
+            <option value="12">Last 12 months</option>
+          </select>
+        </div>
+      </div>
+      <div id="analyticsKpis" class="kpi-grid"></div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">Monthly Sales Value Trend (₹ Lakh)</div>
+          <div class="chart-wrap" id="wrapAnalSales"><canvas id="chartAnalSales"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Monthly Milk Received (Lakh L)</div>
+          <div class="chart-wrap" id="wrapAnalMilk"><canvas id="chartAnalMilk"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-grid-2">
+        <div class="card">
+          <div class="card-title">Avg Fat % &amp; SNF % Trend</div>
+          <div class="chart-wrap" id="wrapAnalQuality"><canvas id="chartAnalQuality"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">VAP Production Trend (MTD Avg)</div>
+          <div class="chart-wrap" id="wrapAnalVap"><canvas id="chartAnalVap"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ GOALS PAGE ═══ -->
+    <div id="page-goals" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-target"></i> Monthly Goals <span class="page-subtitle" id="goalsMonthLabel"></span></div>
+      </div>
+      <div class="goal-layout">
+        <div class="card">
+          <div class="card-title">Set Targets for <span id="goalsSetMonthLabel"></span></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="gSaleValue">Sale Value Target (₹ Lakh)</label>
+              <input type="number" id="gSaleValue" class="form-input" placeholder="e.g. 600" />
+            </div>
+            <div class="form-group">
+              <label for="gVolume">Sale Volume Target (KL)</label>
+              <input type="number" id="gVolume" class="form-input" placeholder="e.g. 38000" />
+            </div>
+            <div class="form-group">
+              <label for="gMilkRecv">Milk Received Target (Lakh L)</label>
+              <input type="number" id="gMilkRecv" class="form-input" placeholder="e.g. 22" />
+            </div>
+            <div class="form-group">
+              <label for="gMargin">Margin Target (₹ Lakh)</label>
+              <input type="number" id="gMargin" class="form-input" placeholder="e.g. 50" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="saveGoalsBtn"><i class="ti ti-device-floppy"></i> Save Goals</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">MTD Progress vs Goals</div>
+          <div id="goalsProgress"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ HISTORY PAGE ═══ -->
+    <div id="page-history" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-history"></i> Record History <span class="page-subtitle" id="histCount"></span></div>
+      </div>
+      <div class="card">
+        <div class="history-toolbar">
+          <input class="form-input search-input" id="histSearch" placeholder="Search..." />
+          <input class="form-input" type="month" id="hMonth" style="max-width:160px" />
+          <button class="btn btn-ghost btn-sm" id="clearHistBtn"><i class="ti ti-list"></i> All</button>
+          <button class="btn btn-accent btn-sm" onclick="exportExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+          <button class="btn btn-danger btn-sm" id="clearAllBtn"><i class="ti ti-trash"></i> Clear All</button>
+        </div>
+        <div class="table-wrap">
+          <table id="histTable">
+            <thead>
+              <tr>
+                <th data-sort="date" class="sortable">Date</th>
+                <th data-sort="total_sale_value" class="sortable">Sale (₹L)</th>
+                <th>Vol (KL)</th>
+                <th>Routes</th>
+                <th>Inst (₹L)</th>
+                <th>Recv (L)</th>
+                <th>Fat%</th>
+                <th>SNF%</th>
+                <th>Rate (₹)</th>
+                <th>Proc (L)</th>
+                <th>Util%</th>
+                <th>City (L)</th>
+                <th>Dahi</th>
+                <th>Lassi</th>
+                <th>Paneer</th>
+                <th>Ghee</th>
+                <th>MPow</th>
+                <th>ICrm</th>
+                <th></th><th></th>
+              </tr>
+            </thead>
+            <tbody id="histBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ IMPORT PAGE ═══ -->
+    <div id="page-import" class="page">
+      <div class="page-header">
+        <div class="page-title"><i class="ti ti-upload"></i> Import Data</div>
+      </div>
+      <div class="card">
+        <div class="upload-zone" id="uploadArea">
+          <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
+          <div class="upload-text">Drop your file here, or <span class="upload-link">browse</span></div>
+          <div class="upload-hint">Supported: .xlsx, .xls, .csv — column names must match field names</div>
+          <input type="file" id="fileIn" accept=".csv,.txt,.xlsx,.xls" style="display:none" />
+        </div>
+        <div id="importPreview"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ IMPORT MODAL ═══ -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="importModalTitle">Import Preview</span>
+      <button class="icon-btn" id="closeImportModal"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="importModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancelImportBtn">Cancel</button>
+      <button class="btn btn-primary" id="importConfirmBtn"><i class="ti ti-upload"></i> Import Records</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SHORTCUTS MODAL ═══ -->
+<div class="modal-overlay" id="shortcutsModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span><i class="ti ti-keyboard"></i> Keyboard Shortcuts</span>
+      <button class="icon-btn" id="closeShortcutsModal"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="shortcut-list">
+        <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save entry</span></div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>E</kbd><span>Export Excel</span></div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>1</kbd><span>Go to Entry</span></div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>2</kbd><span>Go to Summary</span></div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>3</kbd><span>Go to Analytics</span></div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>4</kbd><span>Go to History</span></div>
+        <div class="shortcut-item"><kbd>T</kbd><span>Set today's date (on entry)</span></div>
+        <div class="shortcut-item"><kbd>?</kbd><span>Toggle shortcuts panel</span></div>
+        <div class="shortcut-item"><kbd>Esc</kbd><span>Close modals / sidebar</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

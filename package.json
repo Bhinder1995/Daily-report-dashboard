@@ -1,0 +1,17 @@
+{
+  "name": "dairy-operations-dashboard",
+  "version": "2.0.0",
+  "description": "Dairy Operations Dashboard — Pro Edition",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --open",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
